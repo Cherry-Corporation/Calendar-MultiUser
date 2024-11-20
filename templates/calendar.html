@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>14-Day Calendar</title>
+
+    <!-- Favicon for the website -->
+    <link rel="icon" href="/static/icons/icon-192x192.png" sizes="192x192">
+    <link rel="icon" href="/static/icons/icon-512x512.png" type="image/png">
+    
+    <!-- For PWA Web App Icon -->
+    <link rel="apple-touch-icon" href="/static/icons/icon-192x192.png">
+
+    <!-- FullCalendar CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/fullcalendar@5.11.0/main.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="/static/calendar.css">
+
+    <!-- Web App Manifest -->
+    <link rel="manifest" href="/static/manifest.json">
+
+    <script>
+        if ("serviceWorker" in navigator) {
+            navigator.serviceWorker.register("/static/service-worker.js").then(function(registration) {
+                console.log("Service Worker registered with scope:", registration.scope);
+            }).catch(function(error) {
+                console.error("Service Worker registration failed:", error);
+            });
+        }
+    </script>
+</head>
+<body>
+    <div id="calendar"></div>
+    <button id="add-event-button">+</button>
+    <div id="eventModal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h3>Add or Edit Event</h3>
+            <input type="text" id="event-title" placeholder="Event Title">
+            <textarea id="event-description" placeholder="Event Description" rows="4"></textarea>
+            <label for="event-color">Choose Title Color:</label>
+            <div class="color-palette" id="color-palette">
+                <div class="color-option" style="background-color: #ff5733;" data-color="#ff5733"></div>
+                <div class="color-option" style="background-color: #33aaff;" data-color="#33aaff"></div>
+                <div class="color-option" style="background-color: #66ff66;" data-color="#66ff66"></div>
+                <div class="color-option" style="background-color: #ff33ff;" data-color="#ff33ff"></div>
+                <div class="color-option" style="background-color: #ffcc33;" data-color="#ffcc33"></div>
+            </div>
+            <button id="save-event">Save Event</button>
+        </div>
+    </div>
+
+    <!-- FullCalendar JS -->
+    <script src="https://cdn.jsdelivr.net/npm/fullcalendar@5.11.0/main.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="/static/calendar.js"></script>
+</body>
+</html>

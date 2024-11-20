@@ -8,9 +8,12 @@ app = Flask(__name__)
 # Secret key for session management (used for user login)
 app.secret_key = '21db00c0f6773c0f067172887f07b454eca03ff430a8278a996307a72bd51174'
 
-# Path to the 'data' folder where user-specific event .json files will be saved
-DATA_FOLDER = 'data'
-USERS_FOLDER = 'users'
+# Get the current directory of the main.py script
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
+# Define paths to the 'data' and 'users' folders relative to the current script directory
+DATA_FOLDER = os.path.join(BASE_DIR, 'data')
+USERS_FOLDER = os.path.join(BASE_DIR, 'users')
 USERS_FILE = os.path.join(USERS_FOLDER, 'users.json')
 
 # Compact debug message function for high-level actions only

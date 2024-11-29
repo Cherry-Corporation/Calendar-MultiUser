@@ -197,4 +197,5 @@ from waitress import serve
 
 if __name__ == '__main__':
     debug_message("INFO", "Starting Flask app with Waitress server.")
-    serve(app, host='0.0.0.0', port=80)
+    #serve(app, host='0.0.0.0', port=80)
+    app.run(port=80, debug=True)

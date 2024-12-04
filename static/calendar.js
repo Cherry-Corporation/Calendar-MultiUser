@@ -1,8 +1,8 @@
 document.addEventListener('DOMContentLoaded', function () {
     const calendarEl = document.getElementById('calendar');
-    let selectedColor = '#ffffff'; // Default title color
+    let selectedColor = '#ffffff'; // Default event title color
 
-    // Initialize FullCalendar
+    // Initialize the calendar
     const calendar = new FullCalendar.Calendar(calendarEl, {
         initialView: 'dayGridTwoWeek',
         headerToolbar: {
@@ -22,114 +22,71 @@ document.addEventListener('DOMContentLoaded', function () {
                 buttonText: '1-Week View',
             },
         },
-        editable: true, // Allow events to be draggable
-        events: async function (fetchInfo, successCallback, failureCallback) {
-            try {
-                const response = await fetch('/get_events');
-                const events = await response.json();
-
-                // Ensure every event has a valid 'end' time
-                events.forEach(event => {
-                    if (!event.end) {
-                        // If no 'end' date is set, set it to the same date as the start date
-                        event.end = event.start;
-                    }
-                });
-
-                successCallback(events);
-            } catch (error) {
-                console.error('Error fetching events:', error);
-                failureCallback(error);
-            }
-        },
-        eventContent: function (arg) {
-            const title = document.createElement('div');
-            title.classList.add('event-content');
-            title.innerText = arg.event.title;
-            title.style.color = arg.event.extendedProps.titleColor || '#ffffff';
-            title.style.fontWeight = 'bold';
-
-            const editIcon = document.createElement('span');
-            editIcon.classList.add('edit-icon');
-            editIcon.innerHTML = '✏️';
-            editIcon.onclick = function () {
-                openEditModal(arg.event);
-            };
-
-            const deleteIcon = document.createElement('span');
-            deleteIcon.classList.add('delete-icon');
-            deleteIcon.innerHTML = '🗑️';
-            deleteIcon.onclick = function () {
-                if (confirm('Are you sure you want to delete this event?')) {
-                    arg.event.remove();
-                    deleteEvent(arg.event.id);
-                }
-            };
-
-            const buttonContainer = document.createElement('div');
-            buttonContainer.classList.add('button-container');
-            buttonContainer.appendChild(editIcon);
-            buttonContainer.appendChild(deleteIcon);
-
-            const contentEl = document.createElement('div');
-            contentEl.appendChild(title);
-            contentEl.appendChild(buttonContainer);
-
-            return { domNodes: [contentEl] };
-        },
-        eventDrop: function(info) {
-            const event = info.event;
-        
-            // Log the event to confirm the values
-            console.log("Sending updated event:", {
-                id: event.id,
-                title: event.title,
-                start: event.start, // No need to call toISOString(), keep it as a string
-                end: event.end,     // No need to call toISOString(), keep it as a string
-                titleColor: event.extendedProps.titleColor,
-                description: event.extendedProps.description
-            });
-        
-            // Send updated event data to the server
-            saveEvent(event.id, event.title, event.extendedProps.description, event.start, event.end, event.extendedProps.titleColor);
-        },        
+        editable: true,
+        events: fetchCalendarEvents,
+        eventContent: customizeEventContent,
+        eventDrop: handleEventDrop,
     });
+
     calendar.render();
 
-    // Event Modal Handling
+    // Event modal setup
     const modal = document.getElementById('eventModal');
-    const btn = document.getElementById('add-event-button');
+    const addEventBtn = document.getElementById('add-event-button');
     const closeModalBtn = document.querySelector('.close');
     const saveEventBtn = document.getElementById('save-event');
     const colorPalette = document.getElementById('color-palette');
     const eventTitleInput = document.getElementById('event-title');
     const eventDescriptionInput = document.getElementById('event-description');
 
-    btn.onclick = function () {
+    // Event modal handlers
+    addEventBtn.onclick = showAddEventModal;
+    closeModalBtn.onclick = hideModal;
+    window.onclick = closeModalOnClickOutside;
+
+    // Color picker functionality
+    colorPalette.addEventListener('click', selectColor);
+
+    // Save event from modal
+    saveEventBtn.onclick = saveNewEvent;
+
+    // Reset modal state
+    function resetModal() {
+        eventTitleInput.value = '';
+        eventDescriptionInput.value = '';
+        selectedColor = '#ffffff';
+        document.querySelectorAll('.color-option').forEach(option => option.classList.remove('selected'));
+    }
+
+    // Show modal for adding events
+    function showAddEventModal() {
         resetModal();
         modal.style.display = 'flex';
-    };
-    closeModalBtn.onclick = function () {
+    }
+
+    // Hide modal
+    function hideModal() {
         modal.style.display = 'none';
-    };
-    window.onclick = function (event) {
-        if (event.target == modal) {
+    }
+
+    // Close modal if clicking outside
+    function closeModalOnClickOutside(event) {
+        if (event.target === modal) {
             modal.style.display = 'none';
         }
-    };
+    }
 
-    // Color Picker Logic
-    colorPalette.addEventListener('click', function (event) {
+    // Handle color selection
+    function selectColor(event) {
         if (event.target.classList.contains('color-option')) {
             selectedColor = event.target.getAttribute('data-color');
-            document.querySelectorAll('.color-option').forEach(option => {
-                option.classList.remove('selected');
-            });
+            document.querySelectorAll('.color-option').forEach(option => option.classList.remove('selected'));
             event.target.classList.add('selected');
         }
-    });
+    }
 
-    saveEventBtn.onclick = function () {
+    // Save new event from modal
+    function saveNewEvent() {
         const title = eventTitleInput.value.trim();
         const description = eventDescriptionInput.value.trim();
 
@@ -156,20 +113,12 @@ document.addEventListener('DOMContentLoaded', function () {
             },
         });
 
-        saveEvent(calendarEvent);
+        saveEventToServer(calendarEvent);
         modal.style.display = 'none';
         resetModal();
-    };
-
-    function resetModal() {
-        eventTitleInput.value = '';
-        eventDescriptionInput.value = '';
-        selectedColor = '#ffffff';
-        document.querySelectorAll('.color-option').forEach(option => {
-            option.classList.remove('selected');
-        });
     }
 
+    // Open modal for editing events
     function openEditModal(event) {
         modal.style.display = 'flex';
         eventTitleInput.value = event.title;
@@ -177,11 +126,7 @@ document.addEventListener('DOMContentLoaded', function () {
         selectedColor = event.extendedProps.titleColor || '#ffffff';
 
         document.querySelectorAll('.color-option').forEach(option => {
-            if (option.getAttribute('data-color') === selectedColor) {
-                option.classList.add('selected');
-            } else {
-                option.classList.remove('selected');
-            }
+            option.classList.toggle('selected', option.getAttribute('data-color') === selectedColor);
         });
 
         saveEventBtn.onclick = function () {
@@ -189,38 +134,100 @@ document.addEventListener('DOMContentLoaded', function () {
             event.setExtendedProp('description', eventDescriptionInput.value.trim());
             event.setExtendedProp('titleColor', selectedColor);
 
-            saveEvent(event);
+            saveEventToServer(event);
             modal.style.display = 'none';
         };
     }
 
-    // Save Event to Server
-    async function saveEvent(id, title, description, start, end, titleColor) {
-        const eventDetails = {
-            id: id || null,
-            title: title,
-            description: description || '',
-            titleColor: titleColor || selectedColor,
-            start: start.toISOString(),
-            end: end ? end.toISOString() : start.toISOString(),
+    // Fetch events from the server
+    async function fetchCalendarEvents(fetchInfo, successCallback, failureCallback) {
+        try {
+            const response = await fetch('/get_events');
+            const events = await response.json();
+
+            events.forEach(event => {
+                if (!event.end) {
+                    event.end = event.start;
+                }
+            });
+
+            successCallback(events);
+        } catch (error) {
+            console.error('Error fetching events:', error);
+            failureCallback(error);
+        }
+    }
+
+    // Customize event content
+    function customizeEventContent(arg) {
+        const title = document.createElement('div');
+        title.classList.add('event-content');
+        title.innerText = arg.event.title;
+        title.style.color = arg.event.extendedProps.titleColor || '#ffffff';
+        title.style.fontWeight = 'bold';
+
+        const editIcon = document.createElement('span');
+        editIcon.classList.add('edit-icon');
+        editIcon.innerHTML = '✏️';
+        editIcon.onclick = function () {
+            openEditModal(arg.event);
         };
 
+        const deleteIcon = document.createElement('span');
+        deleteIcon.classList.add('delete-icon');
+        deleteIcon.innerHTML = '🗑️';
+        deleteIcon.onclick = function () {
+            if (confirm('Are you sure you want to delete this event?')) {
+                arg.event.remove();
+                deleteEventFromServer(arg.event.id);
+            }
+        };
+
+        const buttonContainer = document.createElement('div');
+        buttonContainer.classList.add('button-container');
+        buttonContainer.append(editIcon, deleteIcon);
+
+        const contentEl = document.createElement('div');
+        contentEl.append(title, buttonContainer);
+
+        return { domNodes: [contentEl] };
+    }
+
+    // Handle event drop
+    function handleEventDrop(info) {
+        const event = info.event;
+
+        saveEventToServer({
+            id: event.id,
+            title: event.title,
+            description: event.extendedProps.description || '',
+            titleColor: event.extendedProps.titleColor || selectedColor,
+            start: event.start.toISOString(),
+            end: event.end ? event.end.toISOString() : event.start.toISOString(),
+        });
+    }
+
+    // Save event to the server
+    async function saveEventToServer(eventDetails) {
         try {
             const response = await fetch('/save_event', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(eventDetails),
             });
+
             const data = await response.json();
-            if (data.success && !id && data.id) {
-                event.setProp('id', data.id);
+
+            if (data.success && !eventDetails.id && data.id) {
+                eventDetails.id = data.id;
             }
         } catch (error) {
             console.error('Error saving event:', error);
         }
     }
 
-    async function deleteEvent(eventId) {
+    // Delete event from the server
+    async function deleteEventFromServer(eventId) {
         try {
             const response = await fetch('/delete_event', {
                 method: 'POST',
@@ -228,6 +235,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 body: JSON.stringify({ id: eventId }),
             });
             const data = await response.json();
+
             if (!data.success) {
                 throw new Error(data.error);
             }
